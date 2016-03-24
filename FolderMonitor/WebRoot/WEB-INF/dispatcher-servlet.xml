@@ -1,0 +1,99 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jee="http://www.springframework.org/schema/jee"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+			http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+			http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd
+			http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-2.5.xsd
+			http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.5.xsd">
+
+	<!--
+		Activates various annotations to be detected in bean classes:
+		Spring's @Required and @Autowired, as well as JSR 250's @Resource.
+	-->
+	<context:annotation-config />
+
+	<!--
+		- The controllers are autodetected simply by using POJOs labeled with the @Controller annotation.
+	-->
+	<context:component-scan
+		base-package="com.grupointent.daemonServer.controller" />
+
+	<context:component-scan
+		base-package="com.grupointent.genericapp.controller.others" />
+
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+
+		<!-- one of the properties available; the maximum file size in bytes -->
+		<property name="maxUploadSize" value="1000000000" />
+	</bean>
+
+	<!--
+		- Optional: Explicit InternalResourceViewResolver definition,
+		- specifying view class, name prefix, and name suffix.
+		-
+		- Specifying the JstlView class instead of the default InternalResourceView
+		- exports Spring's message source and the current user locale as standard
+		- JSTL attributes, to be leveraged by JSTL fmt tags.
+		-
+		- A prefix/suffix combination allows for symbolic view names to be returned
+		- by controllers, still getting straightly mapped to internal resources.
+		- Example: view name "test" -> resource "/WEB-INF/jsp/test.jsp".
+		-
+		- For more sophisticated mappings, consider ResourceBundleViewResolver
+		- (see "webapp-typical" skeleton) or XmlViewResolver.
+	-->
+
+	<bean id="viewResolver"
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="viewClass">
+			<value>org.springframework.web.servlet.view.JstlView</value>
+		</property>
+		<property name="prefix">
+			<value>/jsp/</value>
+		</property>
+		<property name="suffix">
+			<value>.jsp</value>
+		</property>
+	</bean>
+
+	<bean id="urlFilenameViewController"
+		class="org.springframework.web.servlet.mvc.UrlFilenameViewController" />
+
+
+	<bean
+		class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
+
+
+	</bean>
+
+	<!-- <bean id="urlMapping"
+		class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+		<property name="interceptors">
+			<list></list>
+		</property>
+		<property name="mappings">
+			<props>
+				<prop key="/menu.html">menuController</prop>
+			</props>
+		</property>
+	</bean> -->
+
+
+
+	<bean id="messageSource"
+		class="org.springframework.context.support.ResourceBundleMessageSource">
+		<property name="basenames">
+			<list>
+				<value>labels</value>
+			</list>
+		</property>
+	</bean>
+
+
+
+</beans>

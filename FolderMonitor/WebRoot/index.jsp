@@ -22,5 +22,8 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
   
   <body>
     This is my JSP page. <br>
+    <script type="text/javascript">
+    window.location="./viewDaemons.html";
+    </script>
   </body>
 </html>

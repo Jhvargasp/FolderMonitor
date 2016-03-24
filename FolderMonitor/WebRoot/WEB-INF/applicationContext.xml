@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+
+	
+	
+	<bean id="documentManager"
+		class="com.grupointent.genericapp.components.impl.DocumentManagerFileNetP8Impl">
+		<property name="properties" ref="fileNetP840Connection" />
+		
+	</bean>
+
+	<bean id="taskExtraImplementations"
+		class="com.extra.genericapp.components.impl.TaskIntentExtraImplementations">
+	</bean>
+	
+	<!--  -->
+	<bean id="extraFlowsImplementation"
+		class="com.extra.genericapp.components.impl.ExtraFlowsImpl">
+	</bean>
+
+	<bean id="taskManager"
+		class="com.grupointent.genericapp.components.impl.TaskManagerFileNetP8Impl">
+		<property name="properties" ref="fileNetP840Connection" />
+		
+	</bean>
+
+	<bean id="loginManager"
+		class="com.grupointent.genericapp.components.impl.AuthenticationManagerMockImpl">
+		<property name="ldap" ref="ldapConection" />
+	</bean>
+
+	<bean id="menuManager"
+		class="com.grupointent.genericapp.components.impl.MenuManagerImpl">
+		<property name="menuList">
+			<list>
+
+				<ref bean="isagenMenuValues" />
+				<ref bean="adminMenuValues" />
+				<ref bean="inboxMenuValues" />
+				<ref bean="radicadorMenuValues" />
+				<ref bean="reportsMenuValues" />
+				<ref bean="logoutMenuValues" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="employeeDao"
+		class="com.grupointent.correspondence.domain.dao.impl.EmployeeDaoHibernateImpl">
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+	<bean id="objectDao"
+		class="com.grupointent.correspondence.domain.dao.impl.ObjectDaoHibernateImpl">
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+
+</beans>

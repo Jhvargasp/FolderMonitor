@@ -1,0 +1,27 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+	<bean id="contextApplicationContextProvider"
+		class="com.grupointent.genericapp.context.ApplicationContextProvider">
+	</bean>
+
+
+	<bean id="daemonList" class="java.util.ArrayList">
+		<constructor-arg>
+			<list>
+				<bean
+					class="com.grupointent.daemonServer.beans.DaemonBean">
+					<property name="timeEnlapsed" value="60" />
+					<property name="name" value="Demo" />
+					<property name="classToLaunch"
+						value="com.minminas.scheduler.LanzarMonitorCarpetasMinminas" />
+
+				</bean>
+				
+			 
+
+			</list>
+		</constructor-arg>
+	</bean>
+</beans>
