@@ -79,6 +79,7 @@ public class FileChangeListenerImpl implements FileChangeListener {
 									.append(name).toString());
 				}
 			}
+			borrarFs(absolutePath);
 
 		} else {
 			log.debug((new StringBuilder()).append("No existe un documento con Radicado:").append(name).toString());
@@ -128,7 +129,8 @@ public class FileChangeListenerImpl implements FileChangeListener {
 		try {
 			VWRoster vwRoster = vwSession.getRoster(bundle.getString("rosterNameCorrespondencia"));
 			String sql = bundle.getString("queryRoster");
-			sql = sql.replaceAll("\\{FILENAME\\}", name);
+			sql = sql.replaceAll("\\{FILENAME\\}", d.getProperties().getStringValue("Radicado"));
+			log.debug("Buscando flujo:"+sql);
 			VWRosterQuery rQuery = vwRoster.createQuery(null, null, null, 0, sql, null, 4);
 			if (rQuery.hasNext()) {
 				while (rQuery.hasNext()) {
@@ -172,7 +174,8 @@ public class FileChangeListenerImpl implements FileChangeListener {
 		try {
 			VWRoster vwRoster = vwSession.getRoster(bundle.getString("rosterNameCorrespondencia"));
 			String sql = bundle.getString("queryRoster");
-			sql = sql.replaceAll("\\{FILENAME\\}", name);
+			sql = sql.replaceAll("\\{FILENAME\\}", d.getProperties().getStringValue("Radicado"));
+			log.debug("Buscando:" +sql);
 			VWRosterQuery rQuery = vwRoster.createQuery(null, null, null, 0, sql, null, 4);
 			if (rQuery.hasNext()) {
 				while (rQuery.hasNext()) {
@@ -258,11 +261,19 @@ public class FileChangeListenerImpl implements FileChangeListener {
 			reservation.set_ContentElements(contentList);
 			// change 23/03/2016
 			if (reservation.getProperties().isPropertyPresent("ImagenEsDummie")) {
-				reservation.getProperties().putValue("ImagenEsDummie", false);
+				reservation.getProperties().putValue("ImagenEsDummie",  Boolean.FALSE);
 				log.debug("ImagenEsDummie..setted");
 			} else {
 				log.debug("ImagenEsDummie..not exist.. can not be setted");
 			}
+			
+			if (reservation.getProperties().isPropertyPresent("Estado")) {
+				reservation.getProperties().putValue("Estado", "ASIGNAR CORRESPONDENCIA");
+				log.debug("Estado -... - ASIGNAR CORRESPONDENCIA");
+			} else {
+				log.debug("Estado..not exist.. can not be setted");
+			}
+			
 			try {
 				reservation.setUpdateSequenceNumber(null);
 				reservation.save(RefreshMode.REFRESH);
@@ -274,6 +285,9 @@ public class FileChangeListenerImpl implements FileChangeListener {
 			try {
 				reservation.checkin(AutoClassify.DO_NOT_AUTO_CLASSIFY, CheckinType.MAJOR_VERSION);
 				reservation.setUpdateSequenceNumber(null);
+				if (reservation.getProperties().isPropertyPresent("ImagenEsDummie")) 
+					reservation.getProperties().putValue("ImagenEsDummie", Boolean.FALSE);
+				
 				reservation.save(RefreshMode.REFRESH);
 			} catch (Exception e) {
 				log.debug(e.getMessage());
@@ -281,7 +295,6 @@ public class FileChangeListenerImpl implements FileChangeListener {
 			}
 			log.debug("checkin");
 			avanzarFlujoCorrespondencia(vwSession, name, doc);
-			borrarFs(absolutePath);
 		} catch (Exception e) {
 			log.debug(e.getMessage());
 			e.printStackTrace();
