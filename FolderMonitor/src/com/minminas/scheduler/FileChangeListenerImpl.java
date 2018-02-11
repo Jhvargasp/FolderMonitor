@@ -54,6 +54,12 @@ public class FileChangeListenerImpl implements FileChangeListener {
 	}
 
 	private void asociaDocumentoFilenet(String absolutePath) {
+		String name = (new File(absolutePath)).getName().split("\\.")[0];
+		if(name.length()<10) {
+			log.debug("File name ["+name+"] doesnt match with length required (10+)");
+			return;
+		}
+		
 		log.debug("Obteniendo conexion Content");
 		new ConexionPE();
 		Object obj[] = ConexionPE.getSession(bundle.getString("url"), bundle.getString("usr"), bundle.getString("pwd"),
@@ -61,7 +67,6 @@ public class FileChangeListenerImpl implements FileChangeListener {
 				bundle.getString("objectStore"));
 		ObjectStore store = (ObjectStore) obj[1];
 		VWSession vwsess = (VWSession) obj[0];
-		String name = (new File(absolutePath)).getName().split("\\.")[0];
 		log.debug(name);
 		List ls = buscarDocPorRadicado(store, name);
 		if (ls != null && ls.size() > 0) {
@@ -79,7 +84,11 @@ public class FileChangeListenerImpl implements FileChangeListener {
 									.append(name).toString());
 				}
 			}
-			borrarFs(absolutePath);
+			if(bundle.getString("deleteFiles").equalsIgnoreCase("true")) {
+				borrarFs(absolutePath);
+			}else {
+				backupFiles(absolutePath);
+			}
 
 		} else {
 			log.debug((new StringBuilder()).append("No existe un documento con Radicado:").append(name).toString());
@@ -89,6 +98,14 @@ public class FileChangeListenerImpl implements FileChangeListener {
 		} catch (VWException e) {
 			log.debug(e);
 		}
+	}
+
+	private void backupFiles(String absolutePath) {
+		log.debug("Moving file to backup folder");
+		File origin=new File(absolutePath);
+		File destination=new File(bundle.getString("folderBackupFiles")+"\\"+origin.getName());
+		origin.renameTo(destination);
+		log.debug("Moved to file to " +destination.getAbsolutePath());
 	}
 
 	private void avanzarFlujo(VWSession vwSession, String name, Document d) {
@@ -267,11 +284,11 @@ public class FileChangeListenerImpl implements FileChangeListener {
 				log.debug("ImagenEsDummie..not exist.. can not be setted");
 			}
 			
-			if (reservation.getProperties().isPropertyPresent("Estado")) {
+			if (reservation.getProperties().isPropertyPresent("Estado") && reservation.getProperties().getStringValue("Estado").equalsIgnoreCase("SIN IMAGEN ASOCIADA")) {
 				reservation.getProperties().putValue("Estado", "ASIGNAR CORRESPONDENCIA");
 				log.debug("Estado -... - ASIGNAR CORRESPONDENCIA");
 			} else {
-				log.debug("Estado..not exist.. can not be setted");
+				log.debug("Estado..not exist.. can not be setted or is not 'SIN IMAGEN ASOCIADA'");
 			}
 			
 			try {
