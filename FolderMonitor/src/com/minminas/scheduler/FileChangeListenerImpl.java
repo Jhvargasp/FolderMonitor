@@ -11,7 +11,9 @@ import com.grupointent.filemonitor.FileChangeListener;
 import com.grupointent.filenet.ConexionPE;
 import filenet.vw.api.*;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.*;
 import org.apache.log4j.Logger;
 
@@ -19,47 +21,69 @@ public class FileChangeListenerImpl implements FileChangeListener {
 
 	private static Logger log = Logger.getLogger(FileChangeListenerImpl.class);
 	private static ResourceBundle bundle = ResourceBundle.getBundle("filenet");
+	private static List<String> filesProcessed = new ArrayList();
+	private static boolean isRunning;
+	private static boolean requireValidateAgain;
 
 	public FileChangeListenerImpl() {
 	}
 
 	public void fileChanged(File file) {
 		log.debug((new StringBuilder()).append(file.getName()).append(" changed!").toString());
+		if (isRunning) {
+			log.debug("Is running.. wait for next instance....");
+			return;
+		}
 		try {
 			asociaDocumentos(file.getAbsolutePath());
 		} catch (Exception e) {
 			e.printStackTrace();
 			log.debug(e);
 		}
-	}
-
-	private void asociaDocumentos(String name) throws Exception {
-		String folder = name;
-		File f = new File(folder);
-		File list[] = f.listFiles();
-		File afile[] = list;
-		int i = afile.length;
-		for (int j = 0; j < i; j++) {
-			File file = afile[j];
-			asociaDocumentoFilenet(file.getAbsolutePath());
+		log.debug("Files:" + filesProcessed.size());
+		if (filesProcessed.size() > 500) {
+			filesProcessed.clear();
 		}
 
+	}
+
+	private void asociaDocumentos(String folder) throws Exception {
+		File f = new File(folder);
+		File afile[] = f.listFiles();
+		int i = afile.length;
+		log.debug("Files found... " + i);
+		for (int j = i - 1; j >= 0; j--) {
+			isRunning = true;
+			asociaDocumentoFilenet(afile[j].getAbsolutePath());
+		}
+
+		if (afile.length < new File(folder).listFiles().length) {
+			log.debug("Resend ..");
+			asociaDocumentos(folder);
+		} else {
+			log.debug("No changes... end..");
+		}
+		isRunning = false;
 	}
 
 	public static void main(String args[]) {
-		String p = bundle.getString("querySQL");
-		p = p.replaceAll("\\{FILENAME\\}", "111");
-		FileChangeListenerImpl imp = new FileChangeListenerImpl();
-		imp.asociaDocumentoFilenet("c:/logs/2014000019.pdf");
+		// p = p.replaceAll("\\{FILENAME\\}", "111");
+		// FileChangeListenerImpl imp = new FileChangeListenerImpl();
+		// imp.asociaDocumentoFilenet("c:/logs/2014000019.pdf");
+		// new FileChangeListenerImpl().backupFiles("c:/logs/Forma_W2C_2017119.pdf");
+		new FileChangeListenerImpl().fileChanged(new File(bundle.getString("FILEID")));
 	}
 
 	private void asociaDocumentoFilenet(String absolutePath) {
-		String name = (new File(absolutePath)).getName().split("\\.")[0];
-		if(name.length()<10) {
-			log.debug("File name ["+name+"] doesnt match with length required (10+)");
+		File file = new File(absolutePath);
+		String name = file.getName().split("\\.")[0];
+		if (name.length() < 10) {
+			log.debug("File name [" + name + "] doesnt match with length required (10+)");
 			return;
 		}
-		
+		if (!file.exists() && file.isFile()) {
+			return;
+		}
 		log.debug("Obteniendo conexion Content");
 		new ConexionPE();
 		Object obj[] = ConexionPE.getSession(bundle.getString("url"), bundle.getString("usr"), bundle.getString("pwd"),
@@ -67,31 +91,40 @@ public class FileChangeListenerImpl implements FileChangeListener {
 				bundle.getString("objectStore"));
 		ObjectStore store = (ObjectStore) obj[1];
 		VWSession vwsess = (VWSession) obj[0];
-		log.debug(name);
 		List ls = buscarDocPorRadicado(store, name);
 		if (ls != null && ls.size() > 0) {
 			Document doc;
 			Iterator iterator = ls.iterator();
 			while (iterator.hasNext()) {
 				doc = (Document) iterator.next();
-				updateContent(vwsess, name, doc, store, absolutePath);
 				Double size = doc.get_ContentSize();
+				boolean updateFile = true;
 				if (size == null || size.doubleValue() == 0.0D) {
 					log.debug((new StringBuilder()).append("El documento esta sin contenido:").append(name).toString());
 				} else {
 					log.debug(
 							(new StringBuilder()).append("El documento ya tiene contenido, se procede a actualizacion:")
 									.append(name).toString());
+					log.debug("size ? fSize " + size + " - " + file.length());
+					if (size.longValue() == file.length()) {
+						log.debug("Document has the same file.. no update required...");
+						updateFile = false;
+					}
 				}
+				if (updateFile) {
+					updateContent(vwsess, name, doc, store, absolutePath);
+				}
+
 			}
-			if(bundle.getString("deleteFiles").equalsIgnoreCase("true")) {
+			if (bundle.getString("deleteFiles").equalsIgnoreCase("true")) {
 				borrarFs(absolutePath);
-			}else {
-				backupFiles(absolutePath);
+			} else {
+				moveToFolder(absolutePath, bundle.getString("folderBackupFiles"));
 			}
 
 		} else {
 			log.debug((new StringBuilder()).append("No existe un documento con Radicado:").append(name).toString());
+			moveToFolder(absolutePath, bundle.getString("FILEID") + "\\NoFilenet");
 		}
 		try {
 			vwsess.logoff();
@@ -100,12 +133,29 @@ public class FileChangeListenerImpl implements FileChangeListener {
 		}
 	}
 
-	private void backupFiles(String absolutePath) {
-		log.debug("Moving file to backup folder");
-		File origin=new File(absolutePath);
-		File destination=new File(bundle.getString("folderBackupFiles")+"\\"+origin.getName());
-		origin.renameTo(destination);
-		log.debug("Moved to file to " +destination.getAbsolutePath());
+	private void moveToFolder(String source, String destination) {
+		File folder = new File(destination);
+		if (!folder.exists()) {
+			folder.mkdirs();
+		}
+
+		try {
+			File afile = new File(source);
+			File fileDestination = new File(destination + "\\" + afile.getName());
+			if (fileDestination.exists() && fileDestination.isFile()) {
+				borrarFs(source);
+			} else {
+				if (afile.renameTo(fileDestination)) {
+					log.debug("File is moved successful!");
+				} else {
+					log.debug("File is failed to move!");
+				}
+				Thread.sleep(1000);
+				borrarFs(source);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	private void avanzarFlujo(VWSession vwSession, String name, Document d) {
@@ -147,7 +197,7 @@ public class FileChangeListenerImpl implements FileChangeListener {
 			VWRoster vwRoster = vwSession.getRoster(bundle.getString("rosterNameCorrespondencia"));
 			String sql = bundle.getString("queryRoster");
 			sql = sql.replaceAll("\\{FILENAME\\}", d.getProperties().getStringValue("Radicado"));
-			log.debug("Buscando flujo:"+sql);
+			log.debug("Buscando flujo:" + sql);
 			VWRosterQuery rQuery = vwRoster.createQuery(null, null, null, 0, sql, null, 4);
 			if (rQuery.hasNext()) {
 				while (rQuery.hasNext()) {
@@ -192,7 +242,7 @@ public class FileChangeListenerImpl implements FileChangeListener {
 			VWRoster vwRoster = vwSession.getRoster(bundle.getString("rosterNameCorrespondencia"));
 			String sql = bundle.getString("queryRoster");
 			sql = sql.replaceAll("\\{FILENAME\\}", d.getProperties().getStringValue("Radicado"));
-			log.debug("Buscando:" +sql);
+			log.debug("Buscando:" + sql);
 			VWRosterQuery rQuery = vwRoster.createQuery(null, null, null, 0, sql, null, 4);
 			if (rQuery.hasNext()) {
 				while (rQuery.hasNext()) {
@@ -249,13 +299,24 @@ public class FileChangeListenerImpl implements FileChangeListener {
 	}
 
 	private void borrarFs(String absolutePath) {
-		log.debug((new StringBuilder()).append("Se procede con el borrado del documento:").append(absolutePath)
-				.toString());
-		(new File(absolutePath)).delete();
+		File file = new File(absolutePath);
+		if (file.exists() && file.isFile()) {
+			log.debug((new StringBuilder()).append("Se procede con el borrado del documento:").append(absolutePath)
+					.toString());
+			log.debug(file.delete());
+		}
 	}
 
 	private void updateContent(VWSession vwSession, String name, Document doc, ObjectStore store, String absolutePath) {
+		FileInputStream fileIS =null;
 		try {
+			File internalFile = new File(absolutePath);
+			log.debug((new StringBuilder()).append("Archivo existe?").append(internalFile.exists()).toString());
+			if (!internalFile.exists()) {
+				return;
+			}
+			fileIS = new FileInputStream(internalFile.getAbsolutePath());
+			
 			log.debug((new StringBuilder()).append("checkout>").append(doc.get_IsReserved()).toString());
 			if (!doc.get_IsReserved().booleanValue()) {
 				try {
@@ -267,30 +328,34 @@ public class FileChangeListenerImpl implements FileChangeListener {
 			}
 			log.debug("reserv");
 			Document reservation = (Document) doc.get_Reservation();
-			File internalFile = new File(absolutePath);
-			log.debug((new StringBuilder()).append("Archivo existe?").append(internalFile.exists()).toString());
 			ContentTransfer ctObject = com.filenet.api.core.Factory.ContentTransfer.createInstance();
-			FileInputStream fileIS = new FileInputStream(internalFile.getAbsolutePath());
 			ContentElementList contentList = com.filenet.api.core.Factory.ContentTransfer.createList();
 			ctObject.setCaptureSource(fileIS);
 			ctObject.set_ContentType("application/pdf");
 			contentList.add(ctObject);
 			reservation.set_ContentElements(contentList);
 			// change 23/03/2016
-			if (reservation.getProperties().isPropertyPresent("ImagenEsDummie")) {
-				reservation.getProperties().putValue("ImagenEsDummie",  Boolean.FALSE);
-				log.debug("ImagenEsDummie..setted");
-			} else {
-				log.debug("ImagenEsDummie..not exist.. can not be setted");
+			Properties properties = reservation.getProperties();
+			try {
+				if (properties.isPropertyPresent("ImagenEsDummie")) {
+					properties.putValue("ImagenEsDummie", Boolean.FALSE);
+					log.debug("ImagenEsDummie..setted");
+				} else {
+					log.debug("ImagenEsDummie..not exist.. can not be setted");
+				}
+
+				if (properties.isPropertyPresent("Estado") && properties.getStringValue("Estado")!=null
+						&& properties.getStringValue("Estado").equalsIgnoreCase("SIN IMAGEN ASOCIADA")) {
+					properties.putValue("Estado", "ASIGNAR CORRESPONDENCIA");
+					log.debug("Estado -... - ASIGNAR CORRESPONDENCIA");
+				} else {
+					log.debug("Estado..not exist.. can not be setted or is not 'SIN IMAGEN ASOCIADA'");
+				}
+			} catch (Exception e) {
+				log.debug(e.getMessage());
+				e.printStackTrace();
 			}
-			
-			if (reservation.getProperties().isPropertyPresent("Estado") && reservation.getProperties().getStringValue("Estado").equalsIgnoreCase("SIN IMAGEN ASOCIADA")) {
-				reservation.getProperties().putValue("Estado", "ASIGNAR CORRESPONDENCIA");
-				log.debug("Estado -... - ASIGNAR CORRESPONDENCIA");
-			} else {
-				log.debug("Estado..not exist.. can not be setted or is not 'SIN IMAGEN ASOCIADA'");
-			}
-			
+
 			try {
 				reservation.setUpdateSequenceNumber(null);
 				reservation.save(RefreshMode.REFRESH);
@@ -302,9 +367,9 @@ public class FileChangeListenerImpl implements FileChangeListener {
 			try {
 				reservation.checkin(AutoClassify.DO_NOT_AUTO_CLASSIFY, CheckinType.MAJOR_VERSION);
 				reservation.setUpdateSequenceNumber(null);
-				if (reservation.getProperties().isPropertyPresent("ImagenEsDummie")) 
-					reservation.getProperties().putValue("ImagenEsDummie", Boolean.FALSE);
-				
+				if (properties.isPropertyPresent("ImagenEsDummie"))
+					properties.putValue("ImagenEsDummie", Boolean.FALSE);
+
 				reservation.save(RefreshMode.REFRESH);
 			} catch (Exception e) {
 				log.debug(e.getMessage());
@@ -312,9 +377,17 @@ public class FileChangeListenerImpl implements FileChangeListener {
 			}
 			log.debug("checkin");
 			avanzarFlujoCorrespondencia(vwSession, name, doc);
+			
 		} catch (Exception e) {
 			log.debug(e.getMessage());
 			e.printStackTrace();
+		}
+		if(fileIS!=null) {
+			try {
+				fileIS.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
