@@ -106,10 +106,10 @@ public class FileChangeListenerImpl implements FileChangeListener {
 							(new StringBuilder()).append("El documento ya tiene contenido, se procede a actualizacion:")
 									.append(name).toString());
 					log.debug("size ? fSize " + size + " - " + file.length());
-					if (size.longValue() == file.length()) {
-						log.debug("Document has the same file.. no update required...");
+					//if (size.longValue() == file.length()) {
+						log.debug("Document no update required...");
 						updateFile = false;
-					}
+					//}
 				}
 				if (updateFile) {
 					updateContent(vwsess, name, doc, store, absolutePath);

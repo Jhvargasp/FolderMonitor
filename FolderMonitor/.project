@@ -38,4 +38,11 @@
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>org.eclipse.wst.jsdt.core.jsNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>src1</name>
+			<type>2</type>
+			<location>C:/intent/FolderMonitor/FolderMonitor/src</location>
+		</link>
+	</linkedResources>
 </projectDescription>

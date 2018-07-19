@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+		<property name="hibernateProperties" ref="exampleHibernateProperties" />
+		<property name="mappingResources">
+			<list>
+			</list>
+		</property>
+		<property name="dataSource" ref="mssqlDataSource" />
+	</bean>
+	
+	<bean id="mssqlDataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">		
+		<property name="password" value="C0rr32016P8*" />
+		<property name="driverClass" value="net.sourceforge.jtds.jdbc.Driver">
+		</property>
+		<property name="jdbcUrl"
+			value="jdbc:jtds:sqlserver://serv-p8-back:1433/INTENTFRAMEWORK" />
+		<property name="user" value="SA" />
+	</bean>
+
+	<bean id="exampleHibernateProperties"
+		class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+		<property name="properties">
+			<props>
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<!-- pooled conections -->
+				<prop key="hibernate.connection.provider_class">org.hibernate.connection.C3P0ConnectionProvider</prop>
+				<prop key="hibernate.c3p0.acquire_increment">1</prop>
+				<prop key="hibernate.c3p0.min_size">5</prop>
+				<prop key="hibernate.c3p0.max_size">40</prop>
+				<prop key="hibernate.c3p0.timeout">300</prop>
+				<prop key="hibernate.c3p0.max_statements">50</prop>
+				<prop key="hibernate.c3p0.idle_test_period">3000</prop>
+				<!-- <prop key="hibernate.connection.pool_size">10</prop> -->
+				<!-- cache -->
+				<prop key="hibernate.cache.provider_class">org.hibernate.cache.EhCacheProvider</prop>
+				<prop key="hibernate.cache.use_second_level_cache">true</prop>
+				<prop key="hibernate.cache.use_query_cache">true</prop>
+				<!-- end cache -->
+				<prop key="show_sql">true</prop>
+				<prop key="hibernate.dialect">
+					org.hibernate.dialect.SQLServerDialect
+				</prop>
+			</props>
+		</property>
+	</bean>
+
+</beans>

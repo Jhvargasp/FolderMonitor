@@ -41,7 +41,11 @@ public class FileChangeListenerImpl implements FileChangeListener {
 		int i = afile.length;
 		for (int j = 0; j < i; j++) {
 			File file = afile[j];
-			asociaDocumentoFilenet(file.getAbsolutePath());
+			if (file.exists() && file.length() > 0) {
+				asociaDocumentoFilenet(file.getAbsolutePath());
+			}else {
+				log.debug("File doesnt exist!,"+file.getName() );
+			}
 		}
 
 	}
@@ -180,6 +184,11 @@ public class FileChangeListenerImpl implements FileChangeListener {
 
 	private void updateContent(Document doc, ObjectStore store, String absolutePath) {
 		try {
+			File internalFile = new File(absolutePath);
+			log.debug((new StringBuilder()).append("Archivo existe?").append(internalFile.exists()).toString());
+			if(!internalFile.exists()) {
+				return;
+			}
 			log.debug((new StringBuilder()).append("checkout>").append(doc.get_IsReserved()).toString());
 			if (!doc.get_IsReserved().booleanValue()) {
 				try {
@@ -191,8 +200,6 @@ public class FileChangeListenerImpl implements FileChangeListener {
 			}
 			log.debug("reserv");
 			Document reservation = (Document) doc.get_Reservation();
-			File internalFile = new File(absolutePath);
-			log.debug((new StringBuilder()).append("Archivo existe?").append(internalFile.exists()).toString());
 			ContentTransfer ctObject = com.filenet.api.core.Factory.ContentTransfer.createInstance();
 			FileInputStream fileIS = new FileInputStream(internalFile.getAbsolutePath());
 			ContentElementList contentList = com.filenet.api.core.Factory.ContentTransfer.createList();

@@ -48,6 +48,8 @@
         <param-value>
 			/WEB-INF/daemons.xml 
 			/WEB-INF/dispatcher-servlet.xml
+			/WEB-INF/DataBaseSQLServer.xml
+			
 		</param-value>
     </context-param>
 </web-app>

@@ -61,12 +61,17 @@ public class FileChangeListenerFirmadosImpl implements FileChangeListener {
 				bundle.getString("objectStore"));
 		ObjectStore store = (ObjectStore) obj[1];
 		VWSession vwsess = (VWSession) obj[0];
-		String name = (new File(absolutePath)).getName().split("\\.")[0];
+		File file = new File(absolutePath);
+		
+		String name = (file).getName().split("\\.")[0];
 		log.debug(name);
+		boolean updateFile=true;
+		
+		//ceadmin
 		List ls = buscarDocPorRadicado(store, name);
 		if (ls != null && ls.size() > 0) {
 			Document doc;
-			for (Iterator iterator = ls.iterator(); iterator.hasNext(); updateContent(doc, store, absolutePath)) {
+			for (Iterator iterator = ls.iterator(); iterator.hasNext();) {
 				doc = (Document) iterator.next();
 				Double size = doc.get_ContentSize();
 				if (size == null || size.doubleValue() == 0.0D) {
@@ -75,6 +80,19 @@ public class FileChangeListenerFirmadosImpl implements FileChangeListener {
 					log.debug(
 							(new StringBuilder()).append("El documento ya tiene contenido, se procede a actualizacion:")
 									.append(name).toString());
+				}
+				log.debug("size ? fSize " + size + " - " + file.length());
+				if (size.longValue() == file.length()) {
+					log.debug("Document has the same file.. no update required...");
+					updateFile = false;
+				}
+				if(updateFile) {
+					updateContent(doc, store, absolutePath);
+				}
+				if (bundle.getString("deleteFiles").equalsIgnoreCase("true")) {
+					borrarFs(absolutePath);
+				} else {
+					moveToFolder(absolutePath, bundle.getString("folderBackupFiles"));
 				}
 			}
 
@@ -208,4 +226,29 @@ public class FileChangeListenerFirmadosImpl implements FileChangeListener {
 		return ls;
 	}
 
+	private void moveToFolder(String source, String destination) {
+		File folder = new File(destination);
+		if (!folder.exists()) {
+			folder.mkdirs();
+		}
+
+		try {
+			File afile = new File(source);
+			File fileDestination = new File(destination + "\\" + afile.getName());
+			if (fileDestination.exists() && fileDestination.isFile()) {
+				borrarFs(source);
+			} else {
+				if (afile.renameTo(fileDestination)) {
+					log.debug("File is moved successful!");
+				} else {
+					log.debug("File is failed to move!");
+				}
+				Thread.sleep(1000);
+				borrarFs(source);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
 }
