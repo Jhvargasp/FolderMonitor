@@ -320,6 +320,7 @@ public class FileNet
     {
         finalizarFlujo("Gestores", "Asignar Correspondencia", enlace, pe, rad, login);
         finalizarFlujo("Inbox(0)", "Tramitar Correspondencia", enlace, pe, rad, login);
+        agregarHistorico(enlace, (new StringBuilder("Flujo finalizado por radicado: ")).append(rad).toString(), login);
     }
 
     private static void finalizarFlujo(String nombreCola, String nombrePaso, String enlace, UtilProcessEngine pe, String rad, String login)
@@ -356,7 +357,7 @@ public class FileNet
                 }
 
             }
-            agregarHistorico(enlace, (new StringBuilder("Flujo finalizado por radicado: ")).append(rad).toString(), login);
+            
         }
         catch(Exception ex)
         {
