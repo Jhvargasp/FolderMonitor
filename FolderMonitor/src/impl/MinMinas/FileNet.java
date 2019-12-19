@@ -226,7 +226,14 @@ public class FileNet
         }
         log.debug("Fin subir avanzar");
         String enlaces[] = (String[])wo.getDataField("Enlace").getValue();
-        if(enlaces != null)
+        
+        System.out.println("WO TipoRespuesta:"+wo.getDataField("TipoRespuesta")+", "+wo.getFieldValue("TipoRespuesta") );
+        
+        
+        String tipoRespuesta=wo.hasFieldName("TipoRespuesta")?(String)wo.getFieldValue("TipoRespuesta"):"";
+        
+        
+        if(tipoRespuesta.indexOf("TOTAL")>=0&&enlaces != null)
         {
             String as[];
             int j = (as = enlaces).length;
@@ -238,8 +245,29 @@ public class FileNet
                     finalizarFlujo(enlace, pe, rad, userLogin);
                 }
             }
+            									  
+        } 
+        if(tipoRespuesta.indexOf("PARCIAL")>=0&&enlaces != null)
+        {
+            String as[];
+            int j = (as = enlaces).length;
+            for(int i = 0; i < j; i++)
+            {
+                String enlace = as[i];
+                if(enlace.length() > 0)
+                {
+                	agregarHistorico(enlace, (new StringBuilder("Respondido parcialmente con la comunicación ")).append(rad).toString(), userLogin);
+                	agregarHistorico(rad, (new StringBuilder("Esta comunicación es respuesta parcial a ")).append(enlace).toString(), userLogin);
+                    
+                }
+            }
 
         }
+        else 
+        {
+        	log.debug("No hay cierre por enlace, TipoRespuesta "+ tipoRespuesta +", enlaces "+enlaces);
+        }
+        	
     }
 
     private static Document updateDocumentAndContent(String id, Object urlContent)
